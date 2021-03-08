@@ -9,6 +9,9 @@ const payment = document.getElementById('payment');
 const creditCard = document.getElementById('credit-card');
 const paypal = document.getElementById('paypal');
 const bitcoin = document.getElementById('bitcoin');
+const activities = document.getElementById('activities');
+const form = document.querySelector('form');
+const labelInputs = activities.querySelectorAll('input');
 
 payment.querySelector('option[value="credit-card"]').selected = true;
 let selectedPayment = payment.value;
@@ -33,15 +36,26 @@ const EMAIL_REGEX = /(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|
 
 /**
 * Credit Card numbers are validated to be valid numbers by the Luhn Algorithm https://en.wikipedia.org/wiki/Luhn_algorithm
-* Source: https://youtu.be/mHMda7RQFr8?t=801
+* Source: https://youtu.be/mHMda7RQFr8
 */
 function luhnCheck(n) {
-    n = n.toString().split('').map(Number).reverse();
-    return n.reduce(function (sum, digit, index) {
-        if (index & 1) digit <<= 1;
-        if (digit > 9) digit -= 9;
-        return sum + digit;
-    }, 0) % 10 == 0;
+    const digits = n.toString().split('').map(Number);
+
+    const sum = digits
+        .map((digit, idx) => idx % 2 === digits.length % 2 ? fixDouble(digit * 2) : digit)
+        .reduce((acc, digit) => acc += digit, 0);
+
+    return sum % 10 === 0;
+}
+
+function fixDouble(number) {
+    return number > 9 ? number - 9 : number;
+}
+
+function updateErrors(selector, index, validation) {
+    selector.classList.add('not-valid');
+    selector.lastElementChild.style.display = 'block';
+    selector.lastElementChild.innerText = validation.errors[index].msg;
 }
 
 function formValidation() {
@@ -68,8 +82,8 @@ function formValidation() {
         creditCard: function (cardNumber, zip = false, cvv = false) {
             if (!/^\d{13,16}$/.test(parseInt(cardNumber))) {
                 this.errors.push( { field: 'cc-num', state : /^\d{13,16}$/.test(parseInt(cardNumber)), msg: 'Credit card number must be between 13 - 16 digits' } );
-            } else if (!luhnCheck(parseInt(creditCard[0]))) {
-                this.errors.push( { field: 'cc-num', state : luhnCheck(parseInt(creditCard[0])), msg: 'Credit card number provided is not a valid number' } );
+            } else if (!luhnCheck(parseInt(cardNumber))) {
+                this.errors.push( { field: 'cc-num', state : luhnCheck(parseInt(cardNumber)), msg: 'Credit card number provided is not a valid number' } );
             }
             if (zip !== false) {
                 this.errors.push( { field: 'zip', state: /^\d{1,5}$/.test(parseInt(zip)), msg: 'Zip Code must be 5 digits' } );
@@ -116,13 +130,12 @@ design.addEventListener('change', e => {
     firstOption.selected = true;
 });
 
-const activities = document.getElementById('activities');
-
 activities.addEventListener('click', e => {
     const activitiesCost = document.getElementById('activities-cost');
     totalActivities = [];
 
     if (e.target.type === 'checkbox') {
+        //after error is displayed, remove error if a selection is made
         activities.classList.remove('not-valid');
         activities.lastElementChild.removeAttribute('style');
 
@@ -158,8 +171,6 @@ activities.addEventListener('click', e => {
 });
 
 //Form submission on button click
-const form = document.querySelector('form');
-
 form.addEventListener('submit', e => {
     var validation = new formValidation();
 
@@ -179,14 +190,10 @@ form.addEventListener('submit', e => {
 
         for (let i = 0; i < validation.errors.length; i++) {
             if (validation.errors[i].field === 'activities' && !validation.errors[i].state) {
-                activities.classList.add('not-valid');
-                activities.lastElementChild.style.display = 'block';
-                activities.lastElementChild.innerText = validation.errors[i].msg;
+                updateErrors(activities, i, validation);
             } else if (!validation.errors[i].state) {
                 const selector = document.querySelector(`[for="${validation.errors[i].field}"]`);
-                selector.classList.add('not-valid');
-                selector.lastElementChild.style.display = 'block';
-                selector.lastElementChild.innerText = validation.errors[i].msg;
+                updateErrors(selector, i, validation);
             }
         }
     }
@@ -205,9 +212,7 @@ form.addEventListener('keyup', e => {
         validation.email(userEmail.value);
 
         if (validation.errors.some(error => error.state === false)) {
-            selector.classList.add('not-valid');
-            selector.lastElementChild.style.display = 'block';
-            selector.lastElementChild.innerText = validation.errors[0].msg;
+            updateErrors(selector, 0, validation);
         } else {
             selector.classList.remove('not-valid');
             selector.lastElementChild.removeAttribute('style');
@@ -218,9 +223,7 @@ form.addEventListener('keyup', e => {
         validation.creditCard(document.getElementById('cc-num').value);
 
         if (validation.errors.some(error => error.state === false)) {
-            selector.classList.add('not-valid');
-            selector.lastElementChild.style.display = 'block';
-            selector.lastElementChild.innerText = validation.errors[0].msg;
+            updateErrors(selector, 0, validation);
         } else {
             selector.classList.remove('not-valid');
             selector.lastElementChild.removeAttribute('style');
@@ -229,8 +232,6 @@ form.addEventListener('keyup', e => {
 });
 
 //Better focus states for the register of activities field
-const labelInputs = activities.querySelectorAll('input');
-
 for (let i = 0; i < labelInputs.length; i++) {
     labelInputs[i].addEventListener('focus', e => {
         e.target.parentNode.className = 'focus';
