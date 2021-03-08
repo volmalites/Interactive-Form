@@ -47,25 +47,36 @@ function luhnCheck(n) {
 function formValidation() {
     return {
         name: function (userName) {
-            this.errors.push( { field: 'name', state: (userName) ? true : false } );
+            this.errors.push( { field: 'name', state: (userName) ? true : false, msg: 'Name field cannot be blank' } );
         },
         email: function (userEmail) {
-            this.errors.push( { field: 'email', state: EMAIL_REGEX.test(userEmail) } );
+            if (userEmail === '') {
+                this.errors.push( { field: 'email', state: false, msg: 'The email field can not be empty' } );
+            } else if (!userEmail.includes('@')) {
+                this.errors.push( { field: 'email', state: userEmail.includes('@'), msg: 'Email address must include at least one @ symbol' } );
+            } else if (!/^.+@/.test(userEmail)) {
+                this.errors.push( { field: 'email', state: /^.+@/.test(userEmail), msg: 'The email address should have characters preceding the @ symbol' } );
+            } else if (!/.+\..+/.test(userEmail)) {
+                this.errors.push( { field: 'email', state: /.+\..+/.test(userEmail), msg: 'The email address should have a domain name following the @ symbol [example.com]' } );
+            } else if (!EMAIL_REGEX.test(userEmail)) {
+                this.errors.push( { field: 'email', state: EMAIL_REGEX.test(userEmail), msg: 'Email address must be formatted correctly' } );
+            }
         },
         activities: function (totalActivities) {
-            this.errors.push( { field: 'activities', state: (totalActivities.length > 0) ? true : false } );
+            this.errors.push( { field: 'activities', state: (totalActivities.length > 0) ? true : false, msg: 'Choose at least one activity' } );
         },
-        creditCard: function (cardNumber, zip, cvv) {
-            //Omitting Luhn Check for Project?
-            //let failLuhn = luhnCheck(parseInt(creditCard[0]));
-
-            //if (failLuhn) {
-                this.errors.push( { field: 'cc-num', state : /^\d{13,16}$/.test(parseInt(cardNumber)) } );
-            //} else {
-                //this.errors.push( { 'cc-num' : failLuhn } );
-            //}
-            this.errors.push( { field: 'zip', state: /^\d{1,5}$/.test(parseInt(zip)) } );
-            this.errors.push( { field: 'cvv', state: /^\d{1,3}$/.test(parseInt(cvv)) } );
+        creditCard: function (cardNumber, zip = false, cvv = false) {
+            if (!/^\d{13,16}$/.test(parseInt(cardNumber))) {
+                this.errors.push( { field: 'cc-num', state : /^\d{13,16}$/.test(parseInt(cardNumber)), msg: 'Credit card number must be between 13 - 16 digits' } );
+            } else if (!luhnCheck(parseInt(creditCard[0]))) {
+                this.errors.push( { field: 'cc-num', state : luhnCheck(parseInt(creditCard[0])), msg: 'Credit card number provided is not a valid number' } );
+            }
+            if (zip !== false) {
+                this.errors.push( { field: 'zip', state: /^\d{1,5}$/.test(parseInt(zip)), msg: 'Zip Code must be 5 digits' } );
+            }
+            if (cvv !== false) {
+                this.errors.push( { field: 'cvv', state: /^\d{1,3}$/.test(parseInt(cvv)), msg: 'CVV must be 3 digits' } );
+            }
         },
         errors: []
     }
@@ -105,7 +116,6 @@ design.addEventListener('change', e => {
     firstOption.selected = true;
 });
 
-//Display the total of selected item(s) prices to the 'Register for Activities' fieldset
 const activities = document.getElementById('activities');
 
 activities.addEventListener('click', e => {
@@ -113,6 +123,29 @@ activities.addEventListener('click', e => {
     totalActivities = [];
 
     if (e.target.type === 'checkbox') {
+        activities.classList.remove('not-valid');
+        activities.lastElementChild.removeAttribute('style');
+
+        //Loop over all activities and filter out duplicates
+        const labels = activities.getElementsByTagName('input');
+
+        function removeDuplicates(state) {
+            for (i = 0; i < labels.length; i++) {
+                if (e.target.dataset.dayAndTime === labels[i].dataset.dayAndTime && labels[i].name !== e.target.name) {
+                    labels[i].disabled = state;
+                    if (state) {
+                        labels[i].parentElement.className = 'disabled';
+                    } else {
+                        labels[i].parentElement.classList.remove('disabled');
+                    }
+                }
+            }
+        }
+    
+        e.target.checked ? removeDuplicates(true) : removeDuplicates(false);
+        //End loop
+
+        //Display the total of selected item(s) prices to the 'Register for Activities' fieldset
         const checked = activities.querySelectorAll('[data-cost]:checked');
     
         for (let i = 0; i < checked.length; i++) {
@@ -124,15 +157,16 @@ activities.addEventListener('click', e => {
     }
 });
 
-//Form submission
+//Form submission on button click
 const form = document.querySelector('form');
+
 form.addEventListener('submit', e => {
     var validation = new formValidation();
 
     validation.name(userName.value);
     validation.email(userEmail.value);
     validation.activities(totalActivities);
-    validation.creditCard(document.getElementById('cc-num').value, document.getElementById('zip').value, document.getElementById('cvv').value); //maintain order of parameters
+    validation.creditCard(document.getElementById('cc-num').value, document.getElementById('zip').value, document.getElementById('cvv').value);
 
     const removeNotValid = document.querySelectorAll('.not-valid');
     for (let i = 0; i < removeNotValid.length; i++) {
@@ -140,18 +174,56 @@ form.addEventListener('submit', e => {
         removeNotValid[i].lastElementChild.removeAttribute('style');
     }
     
-    if (validation.errors.some(error => error.state === false)) { //If field forms has errors, prevent submission, log errors to user
+    if (validation.errors.some(error => error.state === false)) { //If field form has errors, prevent submission, log errors to user
         e.preventDefault();
 
         for (let i = 0; i < validation.errors.length; i++) {
             if (validation.errors[i].field === 'activities' && !validation.errors[i].state) {
                 activities.classList.add('not-valid');
                 activities.lastElementChild.style.display = 'block';
+                activities.lastElementChild.innerText = validation.errors[i].msg;
             } else if (!validation.errors[i].state) {
                 const selector = document.querySelector(`[for="${validation.errors[i].field}"]`);
                 selector.classList.add('not-valid');
                 selector.lastElementChild.style.display = 'block';
+                selector.lastElementChild.innerText = validation.errors[i].msg;
             }
+        }
+    }
+});
+
+//Form submission on key up
+form.addEventListener('keyup', e => {
+    var validation;
+    const selector = document.querySelector(`[for="${e.target.getAttribute('id')}"]`);
+
+    if (!validation) {
+        validation = new formValidation();
+    }
+
+    if (e.target.getAttribute('id') === 'email') {
+        validation.email(userEmail.value);
+
+        if (validation.errors.some(error => error.state === false)) {
+            selector.classList.add('not-valid');
+            selector.lastElementChild.style.display = 'block';
+            selector.lastElementChild.innerText = validation.errors[0].msg;
+        } else {
+            selector.classList.remove('not-valid');
+            selector.lastElementChild.removeAttribute('style');
+        }
+    }
+
+    if (e.target.getAttribute('id') === 'cc-num') {
+        validation.creditCard(document.getElementById('cc-num').value);
+
+        if (validation.errors.some(error => error.state === false)) {
+            selector.classList.add('not-valid');
+            selector.lastElementChild.style.display = 'block';
+            selector.lastElementChild.innerText = validation.errors[0].msg;
+        } else {
+            selector.classList.remove('not-valid');
+            selector.lastElementChild.removeAttribute('style');
         }
     }
 });
