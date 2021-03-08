@@ -29,4 +29,5 @@ Credit Card: Will notify the user to provide the complete number and also valida
 
 ## Acknowledgments
 
-* Unknown person named jacobb from codewars for his version of the Luhn Algorithm
+* ~~Unknown person named jacobb from codewars for his version of the Luhn Algorithm~~
+* Due to errors with the previous Luhn, using one done by https://github.com/florinpop17 done on his video at https://youtu.be/mHMda7RQFr8
