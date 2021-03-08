@@ -80,10 +80,12 @@ function formValidation() {
             this.errors.push( { field: 'activities', state: (totalActivities.length > 0) ? true : false, msg: 'Choose at least one activity' } );
         },
         creditCard: function (cardNumber, zip = false, cvv = false) {
-            if (!/^\d{13,16}$/.test(parseInt(cardNumber))) {
-                this.errors.push( { field: 'cc-num', state : /^\d{13,16}$/.test(parseInt(cardNumber)), msg: 'Credit card number must be between 13 - 16 digits' } );
-            } else if (!luhnCheck(parseInt(cardNumber))) {
-                this.errors.push( { field: 'cc-num', state : luhnCheck(parseInt(cardNumber)), msg: 'Credit card number provided is not a valid number' } );
+            if (!/^[0-9]*$/.test(cardNumber.replace(/\s/g, ''))) {
+                this.errors.push( { field: 'cc-num', state : /^[0-9]*$/.test(cardNumber.replace(/\s/g, '')), msg: 'Credit card number can only contain numbers' } );
+            } else if (!/^\d{13,16}$/.test(parseInt(cardNumber.replace(/\s/g, '')))) {
+                this.errors.push( { field: 'cc-num', state : /^\d{13,16}$/.test(parseInt(cardNumber.replace(/\s/g, ''))), msg: 'Credit card number must be between 13 - 16 digits' } );
+            } else if (!luhnCheck(parseInt(cardNumber.replace(/\s/g, '')))) {
+                this.errors.push( { field: 'cc-num', state : luhnCheck(parseInt(cardNumber.replace(/\s/g, ''))), msg: 'Credit card number provided is not a valid number' } );
             }
             if (zip !== false) {
                 this.errors.push( { field: 'zip', state: /^\d{1,5}$/.test(parseInt(zip)), msg: 'Zip Code must be 5 digits' } );
