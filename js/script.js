@@ -9,9 +9,13 @@ const payment = document.getElementById('payment');
 const creditCard = document.getElementById('credit-card');
 const paypal = document.getElementById('paypal');
 const bitcoin = document.getElementById('bitcoin');
-const activities = document.getElementById('activities');
+const activities = document.getElementById('activities-box');
 const form = document.querySelector('form');
 const labelInputs = activities.querySelectorAll('input');
+const color = document.getElementById('color');
+color.setAttribute('disabled', true);
+const design = document.getElementById('design');
+const title = document.getElementById('title');
 
 payment.querySelector('option[value="credit-card"]').selected = true;
 let selectedPayment = payment.value;
@@ -52,10 +56,17 @@ function fixDouble(number) {
     return number > 9 ? number - 9 : number;
 }
 
-function updateErrors(selector, index, validation) {
-    selector.classList.add('not-valid');
-    selector.lastElementChild.style.display = 'block';
-    selector.lastElementChild.innerText = validation.errors[index].msg;
+function updateErrors(selector, index, validation, state) {
+    if (!state) {
+        selector.classList.add('not-valid');
+        selector.classList.remove('valid');
+        selector.lastElementChild.style.display = 'block';
+        selector.lastElementChild.innerText = validation.errors[index].msg;
+    } else {
+        selector.classList.remove('not-valid');
+        selector.classList.add('valid');
+        selector.lastElementChild.removeAttribute('style');
+    }
 }
 
 function formValidation() {
@@ -72,30 +83,39 @@ function formValidation() {
                 this.errors.push( { field: 'email', state: /^.+@/.test(userEmail), msg: 'The email address should have characters preceding the @ symbol' } );
             } else if (!/.+\..+/.test(userEmail)) {
                 this.errors.push( { field: 'email', state: /.+\..+/.test(userEmail), msg: 'The email address should have a domain name following the @ symbol [example.com]' } );
-            } else if (!EMAIL_REGEX.test(userEmail)) {
+            } else {
                 this.errors.push( { field: 'email', state: EMAIL_REGEX.test(userEmail), msg: 'Email address must be formatted correctly' } );
             }
         },
-        activities: function (totalActivities) {
-            this.errors.push( { field: 'activities', state: (totalActivities.length > 0) ? true : false, msg: 'Choose at least one activity' } );
+        'activities-box': function (totalActivities) {
+            this.errors.push( { field: 'activities-box', state: (totalActivities.length > 0) ? true : false, msg: 'Choose at least one activity' } );
         },
-        creditCard: function (cardNumber, zip = false, cvv = false) {
-            if (!/^[0-9]*$/.test(cardNumber.replace(/\s/g, ''))) {
-                this.errors.push( { field: 'cc-num', state : /^[0-9]*$/.test(cardNumber.replace(/\s/g, '')), msg: 'Credit card number can only contain numbers' } );
-            } else if (!/^\d{13,16}$/.test(parseInt(cardNumber.replace(/\s/g, '')))) {
-                this.errors.push( { field: 'cc-num', state : /^\d{13,16}$/.test(parseInt(cardNumber.replace(/\s/g, ''))), msg: 'Credit card number must be between 13 - 16 digits' } );
-            } else if (!luhnCheck(parseInt(cardNumber.replace(/\s/g, '')))) {
-                this.errors.push( { field: 'cc-num', state : luhnCheck(parseInt(cardNumber.replace(/\s/g, ''))), msg: 'Credit card number provided is not a valid number' } );
+        'cc-num': function (cardNumber) {
+            if (document.getElementById('payment').value === 'credit-card') {
+                if (!/^[0-9]*$/.test(cardNumber.replace(/\s/g, ''))) {
+                    this.errors.push( { field: 'cc-num', state : /^[0-9]*$/.test(cardNumber.replace(/\s/g, '')), msg: 'Credit card number can only contain numbers' } );
+                } else {
+                    this.errors.push( { field: 'cc-num', state : /^\d{13,16}$/.test(parseInt(cardNumber.replace(/\s/g, ''))), msg: 'Credit card number must be between 13 - 16 digits' } );
+                }
+                // } else { Removing Luhn Algorithm for this project
+                //     this.errors.push( { field: 'cc-num', state : luhnCheck(parseInt(cardNumber.replace(/\s/g, ''))), msg: 'Credit card number provided is not a valid number' } );
+                // }
             }
-            if (zip !== false) {
-                this.errors.push( { field: 'zip', state: /^\d{1,5}$/.test(parseInt(zip)), msg: 'Zip Code must be 5 digits' } );
-            }
-            if (cvv !== false) {
-                this.errors.push( { field: 'cvv', state: /^\d{1,3}$/.test(parseInt(cvv)), msg: 'CVV must be 3 digits' } );
-            }
+        },
+        zip: function (zip) {
+            this.errors.push( { field: 'zip', state: /^\d{5}$/.test(parseInt(zip)), msg: 'Zip Code must be 5 digits' } );
+        },
+        cvv: function (cvv) {
+            this.errors.push( { field: 'cvv', state: /^\d{3}$/.test(parseInt(cvv)), msg: 'CVV must be 3 digits' } );
         },
         errors: []
     }
+}
+
+function onKeyUp (selector, field) {
+    var validation = new formValidation();
+    validation[field](document.getElementById(field).value);
+    updateErrors(selector.parentElement, 0, validation, validation.errors[0].state);
 }
 
 //Payment info updates dynamically to the payment method selected by the user
@@ -104,7 +124,6 @@ payment.addEventListener('change', e => {
 });
 
 //When 'other' is selected in the Job Role section, the 'other' input becomes available
-const title = document.getElementById('title');
 title.addEventListener('change', e => {
     if (e.target.value !== 'other') {
         otherJobRole.style.display = 'none';
@@ -114,9 +133,6 @@ title.addEventListener('change', e => {
 });
 
 //The T-shirt Info section dynamically updates content related to the design type
-const color = document.getElementById('color');
-color.setAttribute('disabled', true);
-const design = document.getElementById('design');
 design.addEventListener('change', e => {
     selectedPayment = e.target.value;
     color.removeAttribute('disabled');
@@ -132,20 +148,24 @@ design.addEventListener('change', e => {
     firstOption.selected = true;
 });
 
+//Dynamic activities field functionality follows here
 activities.addEventListener('click', e => {
     const activitiesCost = document.getElementById('activities-cost');
     totalActivities = [];
 
     if (e.target.type === 'checkbox') {
-        //after error is displayed, remove error if a selection is made
-        activities.classList.remove('not-valid');
-        activities.lastElementChild.removeAttribute('style');
-
         //Loop over all activities and filter out duplicates
         const labels = activities.getElementsByTagName('input');
+        let hasChecked = false;
 
         function removeDuplicates(state) {
+
             for (i = 0; i < labels.length; i++) {
+                //after error is displayed, remove error if a selection is made
+                if (labels[i].checked) {
+                    hasChecked = true;
+                }
+
                 if (e.target.dataset.dayAndTime === labels[i].dataset.dayAndTime && labels[i].name !== e.target.name) {
                     labels[i].disabled = state;
                     if (state) {
@@ -159,6 +179,16 @@ activities.addEventListener('click', e => {
     
         e.target.checked ? removeDuplicates(true) : removeDuplicates(false);
         //End loop
+        
+        if (hasChecked) {
+            activities.parentElement.classList.remove('not-valid');
+            activities.parentElement.classList.add('valid');
+            activities.parentElement.lastElementChild.removeAttribute('style');
+        } else {
+            activities.parentElement.classList.add('not-valid');
+            activities.parentElement.classList.remove('valid');
+            activities.parentElement.lastElementChild.style.display = 'block';
+        }
 
         //Display the total of selected item(s) prices to the 'Register for Activities' fieldset
         const checked = activities.querySelectorAll('[data-cost]:checked');
@@ -174,63 +204,28 @@ activities.addEventListener('click', e => {
 
 //Form submission on button click
 form.addEventListener('submit', e => {
+    e.preventDefault();
     var validation = new formValidation();
 
-    validation.name(userName.value);
-    validation.email(userEmail.value);
-    validation.activities(totalActivities);
-    validation.creditCard(document.getElementById('cc-num').value, document.getElementById('zip').value, document.getElementById('cvv').value);
-
-    const removeNotValid = document.querySelectorAll('.not-valid');
-    for (let i = 0; i < removeNotValid.length; i++) {
-        removeNotValid[i].classList.remove('not-valid');
-        removeNotValid[i].lastElementChild.removeAttribute('style');
-    }
-    
-    if (validation.errors.some(error => error.state === false)) { //If field form has errors, prevent submission, log errors to user
-        e.preventDefault();
-
-        for (let i = 0; i < validation.errors.length; i++) {
-            if (validation.errors[i].field === 'activities' && !validation.errors[i].state) {
-                updateErrors(activities, i, validation);
-            } else if (!validation.errors[i].state) {
-                const selector = document.querySelector(`[for="${validation.errors[i].field}"]`);
-                updateErrors(selector, i, validation);
+    for (let field in validation) {
+        if (field !== 'errors') {
+            if (field === 'activities-box') {
+                validation[field](totalActivities);
+            } else {
+                validation[field](document.getElementById(field).value);
             }
         }
+    }
+    
+    for (let i = 0; i < validation.errors.length; i++) {
+        updateErrors(document.getElementById(validation.errors[i].field).parentElement, i, validation, validation.errors[i].state);
     }
 });
 
 //Form submission on key up
 form.addEventListener('keyup', e => {
-    var validation;
-    const selector = document.querySelector(`[for="${e.target.getAttribute('id')}"]`);
-
-    if (!validation) {
-        validation = new formValidation();
-    }
-
-    if (e.target.getAttribute('id') === 'email') {
-        validation.email(userEmail.value);
-
-        if (validation.errors.some(error => error.state === false)) {
-            updateErrors(selector, 0, validation);
-        } else {
-            selector.classList.remove('not-valid');
-            selector.lastElementChild.removeAttribute('style');
-        }
-    }
-
-    if (e.target.getAttribute('id') === 'cc-num') {
-        validation.creditCard(document.getElementById('cc-num').value);
-
-        if (validation.errors.some(error => error.state === false)) {
-            updateErrors(selector, 0, validation);
-        } else {
-            selector.classList.remove('not-valid');
-            selector.lastElementChild.removeAttribute('style');
-        }
-    }
+    const selector = document.getElementById(e.target.getAttribute('id'));
+    onKeyUp (selector, e.target.getAttribute('id'));
 });
 
 //Better focus states for the register of activities field
