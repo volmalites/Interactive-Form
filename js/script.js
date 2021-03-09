@@ -207,7 +207,7 @@ form.addEventListener('submit', e => {
     var validation = new formValidation();
 
     for (let field in validation) {
-        if (field !== 'errors') {
+        if (field !== 'errors') { //We do not need to loop over the errors field
             if (field === 'activities-box') {
                 validation[field](totalActivities);
             } else {
@@ -216,7 +216,7 @@ form.addEventListener('submit', e => {
         }
     }
 
-    if (validation.errors.some(error => error.state === false)) {
+    if (validation.errors.some(error => error.state === false)) { // Do not submit should there be errors present
         e.preventDefault();
     }
     
@@ -225,10 +225,12 @@ form.addEventListener('submit', e => {
     }
 });
 
-//Form submission on key up
+//Form submission on key up, dynamic updates and checks
 form.addEventListener('keyup', e => {
-    const selector = document.getElementById(e.target.getAttribute('id'));
-    onKeyUp (selector, e.target.getAttribute('id'));
+    if (e.target.id in formValidation()) { //Only fire if the information is what we are looking for
+        const selector = document.getElementById(e.target.getAttribute('id'));
+        onKeyUp (selector, e.target.getAttribute('id'));
+    }
 });
 
 //Better focus states for the register of activities field
