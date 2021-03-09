@@ -204,7 +204,6 @@ activities.addEventListener('click', e => {
 
 //Form submission on button click
 form.addEventListener('submit', e => {
-    e.preventDefault();
     var validation = new formValidation();
 
     for (let field in validation) {
@@ -215,6 +214,10 @@ form.addEventListener('submit', e => {
                 validation[field](document.getElementById(field).value);
             }
         }
+    }
+
+    if (validation.errors.some(error => error.state === false)) {
+        e.preventDefault();
     }
     
     for (let i = 0; i < validation.errors.length; i++) {
