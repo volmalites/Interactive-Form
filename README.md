@@ -22,6 +22,11 @@ Email: Will give hints as the email is provided, where the @ symbol should be, h
 Activities: Will update should the user make a selection after the error message is displayed
 Credit Card: Will notify the user to provide the complete number and also validate the number against the Luhn Algorithm
 ```
+### Notes
+
+```
+For the requirements of this project and when it gets graded, the Luhn Algorithm feature will be disabled
+```
 
 ## Authors
 
