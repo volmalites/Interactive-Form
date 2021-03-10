@@ -104,12 +104,12 @@ function formValidation() {
         },
         zip: function (zip) {
             if (document.getElementById('payment').value === 'credit-card') {
-                this.errors.push( { field: 'zip', state: /^\d{5}$/.test(parseInt(zip)), msg: 'Zip Code must be 5 digits' } );
+                this.errors.push( { field: 'zip', state: /^\d{5}$/.test(zip), msg: 'Zip Code must be 5 digits' } );
             }
         },
         cvv: function (cvv) {
             if (document.getElementById('payment').value === 'credit-card') {
-                this.errors.push( { field: 'cvv', state: /^\d{3}$/.test(parseInt(cvv)), msg: 'CVV must be 3 digits' } );
+                this.errors.push( { field: 'cvv', state: /^\d{3}$/.test(cvv), msg: 'CVV must be 3 digits' } );
             }
         },
         errors: []
